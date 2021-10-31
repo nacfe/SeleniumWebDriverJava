@@ -1,0 +1,23 @@
+{
+  "cookies": [
+    {
+      "name": "hasAgreedToCookies",
+      "value": "true",
+      "path": "/",
+      "validForDays":"7"
+    }
+  ],
+  "firstName": "Ambrosio",
+  "lastName": "dos Testes",
+  "birthdateDay": "13",
+  "birthdateMonth": "5",
+  "birthdateYear": "1970",
+  "phoneNumber": "21222114554",
+  "email": "ambrosio_dos_testes@example.com",
+  "password": "#$%password123&%$",
+  "postCode": "NN12 8TN",
+  "licenseFilePath": "input/licence_example.png",
+  "carManufacturer": "toyota",
+  "carModel": "prius",
+  "carNumber": "361"
+}

@@ -1,0 +1,69 @@
+def TIMEOUT_STEP_RUN_TESTS = 5
+
+pipeline {
+    agent any
+    options {
+		buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5')
+	}
+    parameters {
+        choice(name: 'DOMAIN', choices: ['example.com'], description: 'Choose the tests domain.')
+        string(name: 'PAGELOAD_TIMEOUT', defaultValue: '15', description: 'Set the timeout (in seconds) to wait for the pages to load.')
+        string(name: 'SCRIPT_TIMEOUT', defaultValue: '10', description: 'Set the timeout (in seconds) to wait for the pages scripts to finish.')
+        string(name: 'SHORT_WAIT', defaultValue: '5', description: 'The majority of the tests steps fail fast. Set the timeout (in seconds) to wait before failing.\nIf the value is set too high, the test will take longer to run. If the value is set too low, the test will become flaky.')
+        string(name: 'LONG_WAIT', defaultValue: '10', description: 'Some test steps take longer than usual to run. Set the timeout (in seconds) that should be waited before failing this kind of steps.')
+        string(name: 'RUN_ONLY_THESE_TESTS', defaultValue: '', description: 'If you want to run just one or a couple of tests, put them in here, separated by commas and/or using wildcards. Leave blank to run all tests.')
+        gitParameter branch: '', branchFilter: '.*', defaultValue: 'origin/master', description: '', listSize: '20', name: 'BRANCH', quickFilterEnabled: false, selectedValue: 'DEFAULT', sortMode: 'ASCENDING', tagFilter: '*', type: 'PT_BRANCH'
+    }
+    environment {
+        DUMMY_AUTO_TESTS_CRED = credentials('auto-tests-cred')
+    }
+    stages {
+        stage('Tests: Run Automated Tests') {
+            steps {
+                timeout(time: TIMEOUT_STEP_RUN_TESTS, unit: 'MINUTES') {
+                    sh '''#!/bin/bash -l
+
+                        echo "Exporting environment variables."
+
+                        # Export all necessary env vars, used by the tests
+
+                        export AUTO_TEST_DOMAIN=${DOMAIN}
+                        export AUTO_TEST_PAGELOAD_TIMEOUT=${PAGELOAD_TIMEOUT}
+                        export AUTO_TEST_SCRIPT_TIMEOUT=${SCRIPT_TIMEOUT}
+                        export AUTO_TEST_SHORT_WAIT=${SHORT_WAIT}
+                        export AUTO_TEST_LONG_WAIT=${LONG_WAIT}
+                        
+                        # Echo all the env vars values, so they are logged
+
+                        echo "AUTO_TEST_DOMAIN: ${AUTO_TEST_DOMAIN}"
+                        echo "AUTO_TEST_PAGELOAD_TIMEOUT: ${AUTO_TEST_PAGELOAD_TIMEOUT}"
+                        echo "AUTO_TEST_SCRIPT_TIMEOUT: ${AUTO_TEST_SCRIPT_TIMEOUT}"
+                        echo "AUTO_TEST_SHORT_WAIT: ${AUTO_TEST_SHORT_WAIT}"
+                        echo "AUTO_TEST_LONG_WAIT: ${AUTO_TEST_LONG_WAIT}"
+                        echo "RUN_ONLY_THESE_TESTS: ${RUN_ONLY_THESE_TESTS}"
+
+                        # Running tests
+                        echo "Running tests."
+                        if [[ -z "${RUN_ONLY_THESE_TESTS}" ]]; then
+                            mvn test
+                        else
+                            mvn -Dtest=${RUN_ONLY_THESE_TESTS} test
+                        fi
+                    '''
+                }
+            }
+        }
+    }
+    post {
+        always {
+            publishHTML (target: [
+                allowMissing: false,
+                alwaysLinkToLastBuild: false,
+                keepAll: true,
+                reportDir: 'reports/tests/automatedTests',
+                reportFiles: 'index.html',
+                reportName: "Test Summary"
+            ])
+        }
+    }
+}
